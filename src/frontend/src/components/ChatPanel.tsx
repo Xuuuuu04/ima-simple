@@ -1,5 +1,13 @@
 import React, { useState } from 'react'
 import { API_BASE } from '../config'
+import { ChatHistorySidebar } from './ChatHistorySidebar'
+
+/**
+ * 骨架屏组件
+ */
+const Skeleton = ({ height = 20 }: { height?: number }) => (
+  <div className="skeleton" style={{ height }} />
+)
 
 /**
  * RAG/Agent 响应的引用信息。
@@ -27,6 +35,8 @@ export const ChatPanel: React.FC = () => {
   const [mode, setMode] = useState<'rag' | 'agent'>('rag')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [chatId, setChatId] = useState<number | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   /**
    * 将用户问题提交到选定的后端接口。
@@ -44,9 +54,12 @@ export const ChatPanel: React.FC = () => {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, chat_id: chatId }),
       })
       const data = await res.json()
+      if (data.chat_id) {
+        setChatId(data.chat_id)
+      }
       setAnswer(data.answer || '')
       setCitations(data.citations || [])
       setSteps(data.steps || [])
@@ -86,6 +99,9 @@ export const ChatPanel: React.FC = () => {
 
       <div className="chat-grid">
         <section className="chat-input-area">
+          <button className="history-toggle" onClick={() => setHistoryOpen(!historyOpen)}>
+            📜 历史
+          </button>
           <div className="mode-toggle" role="tablist" aria-label="模式选择">
             <button
               type="button"
@@ -124,10 +140,29 @@ export const ChatPanel: React.FC = () => {
             <span>支持长文本输入</span>
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="error-message">
+              <span>{error}</span>
+              <button onClick={submitQuestion} className="retry-btn">
+                重试
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="chat-content">
+          {loading && !answer && (
+            <div className="result-card answer-card">
+              <h3>回答</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Skeleton height={24} />
+                <Skeleton height={24} />
+                <Skeleton height={24} />
+                <Skeleton height={100} />
+              </div>
+            </div>
+          )}
+
           {answer && (
             <div className="result-card answer-card">
               <h3>回答</h3>
@@ -182,6 +217,16 @@ export const ChatPanel: React.FC = () => {
           )}
         </section>
       </div>
+
+      <ChatHistorySidebar
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onSelect={(id) => {
+          setChatId(id)
+          setHistoryOpen(false)
+        }}
+        currentChatId={chatId}
+      />
     </div>
   )
 }

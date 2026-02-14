@@ -20,16 +20,21 @@ export const KnowledgeBasePanel: React.FC = () => {
   const [urlToIngest, setUrlToIngest] = useState('')
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
 
   /**
    * 从后端加载已索引文档列表。
    */
   const loadDocs = async () => {
     setLoading(true)
+    setError('')
     try {
       const res = await fetch(`${API_BASE}/kb/documents`)
+      if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
       setDocs(data)
+    } catch (e) {
+      setError('加载文档列表失败')
     } finally {
       setLoading(false)
     }
@@ -166,6 +171,14 @@ export const KnowledgeBasePanel: React.FC = () => {
           <h3>已索引文档</h3>
           <span className="doc-count">{docs.length} 项</span>
         </div>
+        {error && (
+          <div className="error-message">
+            <span>{error}</span>
+            <button onClick={loadDocs} className="retry-btn">
+              重试
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="loading-indicator">加载中...</div>
         ) : (

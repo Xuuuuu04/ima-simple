@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
 /**
@@ -6,6 +6,27 @@ import { API_BASE } from '../config'
  */
 export const SettingsPanel: React.FC = () => {
   const [baseUrl, setBaseUrl] = useState(API_BASE)
+  const [health, setHealth] = useState<{ status: string; mock_mode: boolean } | null>(null)
+  const [docCount, setDocCount] = useState(0)
+  const [chatCount, setChatCount] = useState(0)
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${API_BASE}/health`)
+        .then((r) => r.json())
+        .catch(() => null),
+      fetch(`${API_BASE}/kb/documents`)
+        .then((r) => r.json())
+        .catch(() => []),
+      fetch(`${API_BASE}/chat/history`)
+        .then((r) => r.json())
+        .catch(() => []),
+    ]).then(([h, docs, chats]) => {
+      setHealth(h)
+      setDocCount(docs ? docs.length : 0)
+      setChatCount(chats ? chats.length : 0)
+    })
+  }, [])
 
   return (
     <div className="panel settings-panel">
@@ -37,6 +58,31 @@ export const SettingsPanel: React.FC = () => {
               <br />
               后端模型配置 (LLM, Embeddings) 请修改后端 <code>.env</code> 文件。
             </p>
+          </div>
+        </section>
+
+        <section className="setting-card">
+          <h3>系统状态</h3>
+          <div className="about-grid">
+            <div>
+              <span className="about-label">后端连接</span>
+              <div className="status-indicator" style={{ marginTop: '4px' }}>
+                <div className={`status-dot ${health ? 'online' : 'offline'}`} />
+                <span className="about-value">{health ? '在线' : '离线'}</span>
+              </div>
+            </div>
+            <div>
+              <span className="about-label">运行模式</span>
+              <span className="about-value">{health?.mock_mode ? 'Mock' : 'Real'}</span>
+            </div>
+            <div>
+              <span className="about-label">文档数量</span>
+              <span className="about-value">{docCount}</span>
+            </div>
+            <div>
+              <span className="about-label">对话数量</span>
+              <span className="about-value">{chatCount}</span>
+            </div>
           </div>
         </section>
 
